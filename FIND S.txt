@@ -1,0 +1,102 @@
+FIND S
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.model_selection import train_test_split
+
+df = pd.read_csv('/content/bank-additional-full.csv', sep=';')
+le = LabelEncoder()
+df['y'] = le.fit_transform(df['y'])  # no=0, yes=1
+
+features = ['job', 'marital', 'education', 'default', 'housing', 'loan']
+X = df[features]
+y = df['y']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+
+def find_s_algorithm(X, y):
+    pos_examples = X[y == 1].reset_index(drop=True)
+    hypothesis = pos_examples.iloc[0].copy()
+    for i in range(1, len(pos_examples)):
+        for col in hypothesis.index:
+            if hypothesis[col] != pos_examples.loc[i, col]:
+                hypothesis[col] = '?'
+    return hypothesis
+
+hypothesis = find_s_algorithm(X_train, y_train)
+print("Final hypothesis:", hypothesis)
+
+def predict_find_s(X, hypothesis):
+    predictions = []
+    for idx, row in X.iterrows():
+        match = True
+        for attr in hypothesis.index:
+            if hypothesis[attr] != '?' and row[attr] != hypothesis[attr]:
+                match = False
+                break
+        predictions.append(1 if match else 0)
+    return np.array(predictions)
+
+y_pred = predict_find_s(X_test, hypothesis)
+
+# 1. Histogram of Age (Updated to HEXCODE1: #ff8080)
+plt.figure(figsize=(8, 4))
+sns.histplot(df['age'], bins=30, kde=False, color='#ff8080', edgecolor='black')  # HEXCODE1
+plt.title('Histogram of Age', fontsize=14)
+plt.xlabel('Age')
+plt.ylabel('Count')
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.show()
+
+# 2. Bar plot of class distribution (HEXCODE2 = #66a3ff, HEXCODE3 = #d5ff80)
+plt.figure(figsize=(6, 4))
+sns.countplot(x='y', data=df, palette=['#66a3ff', '#d5ff80'])  # HEXCODE2 & HEXCODE3
+plt.title('Class Distribution (0=No, 1=Yes)', fontsize=14)
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.show()
+
+# 3. Confusion Matrix (HEXCODE4 = #99ff99)
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(5, 4))
+sns.heatmap(cm, annot=True, fmt='d', cmap=sns.color_palette(["#e6ffe6", "#99ff99", "#33cc33"], as_cmap=True), cbar=False)  # Simulate soft green
+plt.title('Confusion Matrix', fontsize=14)
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
+
+# 4. ROC Curve (HEXCODE5 = #ff0066)
+fpr, tpr, thresholds = roc_curve(y_test, y_pred)
+roc_auc = auc(fpr, tpr)
+
+plt.figure(figsize=(6, 5))
+plt.plot(fpr, tpr, color='#ff0066', lw=2, label=f'ROC Curve (AUC = {roc_auc:.2f})')  # HEXCODE5
+plt.plot([0, 1], [0, 1], color='gray', lw=1.2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve', fontsize=14)
+plt.legend(loc='lower right')
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.show()
+
+# 5. Actual vs Predicted (HEXCODE6 = #9999ff, HEXCODE7 = #ffb84d)
+n_samples = min(20000, len(y_test))
+
+plt.figure(figsize=(15, 4))
+plt.plot(range(n_samples), y_test.values[:n_samples], label='Actual', color='#9999ff', alpha=0.85)  # HEXCODE6
+plt.plot(range(n_samples), y_pred[:n_samples], label='Predicted', color='#ffb84d', alpha=0.85)  # HEXCODE7
+plt.title('Actual vs Predicted (first 20,000 samples) - Find-S / Candidate Elimination', fontsize=14)
+plt.xlabel('Sample Index')
+plt.ylabel('Class Label')
+plt.legend()
+plt.grid(True, linestyle='--', alpha=0.4)
+plt.show()

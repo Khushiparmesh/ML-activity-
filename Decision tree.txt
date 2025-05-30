@@ -1,0 +1,85 @@
+Decision tree
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.preprocessing import LabelEncoder
+
+df = pd.read_csv('/content/bank-additional-full.csv', sep=';')
+df['y'] = df['y'].map({'no': 0, 'yes': 1})
+df = df.dropna()
+
+features = ['age', 'job', 'marital', 'education', 'default', 'housing', 'loan', 'duration']
+X = df[features]
+y = df['y']
+
+cat_cols = ['job', 'marital', 'education', 'default', 'housing', 'loan']
+for col in cat_cols:
+    le = LabelEncoder()
+    X[col] = le.fit_transform(X[col])
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, stratify=y, random_state=42)
+
+dt = DecisionTreeClassifier(random_state=42)
+dt.fit(X_train, y_train)
+y_pred = dt.predict(X_test)
+y_prob = dt.predict_proba(X_test)[:, 1]
+
+# Improved visualization functions
+def plot_histogram():
+    plt.hist(df['age'], bins=30, color='#6A5ACD', edgecolor='black')  # Slate Blue
+    plt.title('Histogram of Age')
+    plt.xlabel('Age')
+    plt.ylabel('Frequency')
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
+    plt.show()
+
+def plot_class_dist():
+    sns.countplot(x='y', data=df, palette='dark')  # Dark-themed palette
+    plt.title('Class Distribution')
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
+    plt.show()
+
+def plot_conf_matrix(y_true, y_pred):
+    cm = confusion_matrix(y_true, y_pred)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='BuPu')  # Blue-Purple shades
+    plt.title('Confusion Matrix - Decision Tree')
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.show()
+
+def plot_roc(y_true, y_prob):
+    fpr, tpr, _ = roc_curve(y_true, y_prob)
+    roc_auc = auc(fpr, tpr)
+    plt.plot(fpr, tpr, label=f'AUC = {roc_auc:.2f}', color='#8B0000', lw=2)  # Dark Red
+    plt.plot([0, 1], [0, 1], '--', color='gray')
+    plt.title('ROC Curve - Decision Tree')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.legend(loc='lower right')
+    plt.grid(True)
+    plt.show()
+
+def plot_actual_vs_pred(y_true, y_pred, algo_name):
+    n_samples = min(20000, len(y_true))
+    plt.figure(figsize=(15, 4))
+    plt.plot(range(n_samples), y_true.values[:n_samples], label='Actual', color='#FF8C00', alpha=0.8)  # Dark Orange
+    plt.plot(range(n_samples), y_pred[:n_samples], label='Predicted', color='#4B0082', alpha=0.8)  # Indigo
+    plt.title(f'Actual vs Predicted (first 20,000 samples) - {algo_name}')
+    plt.xlabel('Sample Index')
+    plt.ylabel('Class Label')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+# Execute all visualizations
+plot_histogram()
+plot_class_dist()
+plot_conf_matrix(y_test, y_pred)
+plot_roc(y_test, y_prob)
+plot_actual_vs_pred(y_test, y_pred, "Decision Tree")
